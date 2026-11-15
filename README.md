@@ -192,7 +192,7 @@ Page  →  Provider (ChangeNotifier)  →  Repository (Interface)  →  AppDatab
 flutter test
 ```
 
-پوشش فعلی (۱۰۷ تست):
+پوشش فعلی (۱۱۲ تست):
 
 | فایل | موضوع |
 |---|---|
@@ -203,6 +203,7 @@ flutter test
 | `test/booking_flow_test.dart` | مسیر ۴ مرحله‌ای رزرو، ساخت مشتری جدید، جستجوی کد پیگیری، reset |
 | `test/app_smoke_test.dart` | بالا آمدن کامل اپ با ۱۱ Provider و رندر پیشخوان |
 | `test/layout_test.dart` | ۲۶ مسیر × ۳ ویوپورت (۳۹۰/۷۶۸/۱۳۶۶) بدون سرریز چیدمان + تأیید قلم Lalezar |
+| `test/error_widget_test.dart` | ویجت خطا بدون `Directionality`/`MaterialApp` هم سالم است؛ بدون حلقه و بدون Stack Overflow |
 
 ---
 
@@ -230,6 +231,6 @@ flutter test
 
 ```
 dart analyze        →  No issues found!  (0 error / 0 warning / 0 info)
-flutter test        →  107 tests, all passing
+flutter test        →  112 tests, all passing
 flutter build web   →  ✓ Built build/web (با --no-web-resources-cdn)
 ```

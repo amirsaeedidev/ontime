@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'app/app.dart';
 import 'app/theme/app_palette.dart';
 import 'app/theme/app_theme.dart';
+import 'core/widgets/boot_error_widget.dart';
 import 'data/mock/app_database.dart';
 import 'data/repositories/activity_repository.dart';
 import 'data/repositories/appointment_repository.dart';
@@ -42,23 +43,20 @@ import 'features/sms/presentation/providers/sms_provider.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // نمایش خطاهای رندر به‌جای صفحه قرمز/خالی.
-  ErrorWidget.builder = (FlutterErrorDetails details) => _StartupErrorBox(
-        message: 'خطا در نمایش این بخش',
-        details: details.exceptionAsString(),
-        compact: true,
-      );
+  // ویجت خطا: هیچ وابستگی‌ای به Directionality/MaterialApp ندارد تا خودش خطا
+  // ندهد و باعث «بازگشت بی‌پایان → Stack Overflow» نشود.
+  ErrorWidget.builder = _buildErrorWidget;
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    debugPrint('[ONTIME][FlutterError] ${details.exceptionAsString()}');
+    _logError('FlutterError', details.exceptionAsString());
   };
 
   runZonedGuarded(
     () {
       // خطاهای غیرمنتظرهٔ پلتفرم (مثلاً پلاگین‌ها) نباید برنامه را متوقف کنند.
       PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-        debugPrint('[ONTIME][PlatformError] $error\n$stack');
+        _logError('PlatformError', '$error');
         return true;
       };
 
@@ -75,11 +73,57 @@ void main() {
       runApp(const OnTimeBootstrap());
     },
     (Object error, StackTrace stack) {
-      debugPrint('[ONTIME][ZoneError] $error\n$stack');
+      _logError('ZoneError', '$error');
       _reportFatal(error, stack);
       runApp(_FatalApp(error: error));
     },
   );
+}
+
+// ───────────────────────────── مدیریت خطا ─────────────────────────────
+
+/// محدودکنندهٔ طوفان خطا: اگر در بازهٔ کوتاه خطاهای زیادی رخ دهد (نشانهٔ حلقه)،
+/// پس از [maxErrorsPerWindow] مورد، به‌جای ساخت ویجت خطا یک ویجت خالی برمی‌گردانیم
+/// تا فریم‌ورک هرگز با Stack Overflow از کار نیفتد.
+const int maxErrorsPerWindow = 12;
+const Duration errorWindow = Duration(seconds: 3);
+
+int _errorCount = 0;
+DateTime _errorWindowStart = DateTime.now();
+
+Widget _buildErrorWidget(FlutterErrorDetails details) {
+  final now = DateTime.now();
+  if (now.difference(_errorWindowStart) > errorWindow) {
+    _errorWindowStart = now;
+    _errorCount = 0;
+  }
+  _errorCount++;
+  if (_errorCount > maxErrorsPerWindow) {
+    // چرخهٔ خطا تشخیص داده شد؛ سکوت امن بهتر از Stack Overflow است.
+    return const SizedBox.shrink();
+  }
+  return BootErrorWidget(
+    title: 'خطا در نمایش این بخش',
+    details: details.exceptionAsString(),
+    compact: true,
+  );
+}
+
+String? _lastLogged;
+int _lastLoggedRepeat = 0;
+
+/// لاگ خطا با حذف تکرارهای پشت‌سرهم تا کنسول با هزاران سطر پر نشود.
+void _logError(String source, String message) {
+  if (_lastLogged == message) {
+    _lastLoggedRepeat++;
+    // هر ۲۰ تکرار یک‌بار اعلام می‌کنیم که خطا تکرار شده است.
+    if (_lastLoggedRepeat % 20 != 0) return;
+    debugPrint('[ONTIME][$source] $message  (تکرار $_lastLoggedRepeat)');
+    return;
+  }
+  _lastLogged = message;
+  _lastLoggedRepeat = 0;
+  debugPrint('[ONTIME][$source] $message');
 }
 
 void _reportFatal(Object error, StackTrace stack) {
@@ -152,6 +196,9 @@ class _OnTimeBootstrapState extends State<OnTimeBootstrap> {
 }
 
 /// صفحه خطای فارسی؛ در صورت شکست فاجعه‌بار راه‌اندازی نمایش داده می‌شود.
+///
+/// این صفحه خودش از [BootErrorWidget] استفاده می‌کند که هیچ وابستگی به محیط
+/// ندارد؛ بنابراین حتی اگر ساخت برنامه نیمه‌کاره بماند، نمایش خطا امن است.
 class _FatalApp extends StatelessWidget {
   const _FatalApp({required this.error});
 
@@ -162,71 +209,14 @@ class _FatalApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(AppPalette.navy),
-      home: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: _StartupErrorBox(
-                message: 'اجرای برنامه با خطا مواجه شد',
-                details: '$error',
-              ),
-            ),
-          ),
+      home: ColoredBox(
+        color: const Color(0xFF0A1227),
+        child: BootErrorWidget(
+          title: 'اجرای برنامه با خطا مواجه شد',
+          details: '$error',
+          compact: false,
         ),
       ),
-    );
-  }
-}
-
-class _StartupErrorBox extends StatelessWidget {
-  const _StartupErrorBox({required this.message, required this.details, this.compact = false});
-
-  final String message;
-  final String details;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    const accent = Color(0xFFEF4444);
-    if (compact) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        color: const Color(0xFF111A2B),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: AppTheme.fontFamily, color: accent, fontSize: 12),
-        ),
-      );
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.error_outline_rounded, color: accent, size: 44),
-        const SizedBox(height: 14),
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: AppTheme.fontFamily,
-            fontSize: 17,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          details.length > 240 ? '${details.substring(0, 240)}…' : details,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: AppTheme.fontFamily,
-            fontSize: 11,
-            color: Color(0xFF9FB0C9),
-            height: 1.7,
-          ),
-        ),
-      ],
     );
   }
 }

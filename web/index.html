@@ -58,10 +58,14 @@
       color: #6B7C99; background: #111A2B; border: 1px solid #1E2A47;
       border-radius: 10px; padding: 10px 12px; max-width: 460px; overflow-wrap: anywhere;
     }
+    #boot-error .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
     #boot-error button {
       font-family: 'Lalezar', Tahoma, sans-serif; font-size: 16px; color: #fff;
       background: linear-gradient(270deg, #2563EB, #38BDF8); border: 0;
       border-radius: 14px; padding: 12px 26px; cursor: pointer;
+    }
+    #boot-error button.ghost {
+      background: transparent; border: 1px solid #1E2A47; color: #9FB0C9;
     }
   </style>
 </head>
@@ -78,7 +82,10 @@
       بارگذاری موتور برنامه با خطا مواجه شد. اتصال شبکه یا مسدودسازی منابع را بررسی کنید و دوباره تلاش نمایید.
     </div>
     <code id="boot-error-detail"></code>
-    <button type="button" onclick="window.location.reload()">تلاش دوباره</button>
+    <div class="actions">
+      <button type="button" onclick="window.location.reload()">تلاش دوباره</button>
+      <button type="button" class="ghost" onclick="hardReset()">پاک‌سازی کش و تلاش دوباره</button>
+    </div>
   </div>
 
   <noscript>
@@ -87,6 +94,49 @@
     </div>
   </noscript>
 
+  <script>
+    // اگر نسخهٔ قدیمی برنامه در کش مرورگر/Service Worker مانده باشد، رفتارهای
+    // عجیب (از جمله خطاهای تکراری رندر) دیده می‌شود. این دکمه همه چیز را پاک
+    // می‌کند و صفحه را از نو بارگذاری می‌کند.
+    async function hardReset() {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+      } catch (e) {
+        // مهم نیست؛ در هر حال تلاش می‌کنیم دوباره بارگذاری کنیم.
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', String(Date.now()));
+      window.location.replace(url.toString());
+    }
+
+    // شبکهٔ ایمنی نهایی: اگر تا ۴۰ ثانیه اولین فریم نمایش داده نشد، پیام
+    // «در حال بارگذاری» را به خطای قابل اقدام تبدیل می‌کنیم تا کاربر هرگز با
+    // اسپینر بی‌پایان تنها نماند.
+    (function () {
+      var settled = false;
+      window.addEventListener('flutter-first-frame', function () { settled = true; });
+      setTimeout(function () {
+        if (settled) return;
+        var loading = document.getElementById('loading');
+        var err = document.getElementById('boot-error');
+        var detail = document.getElementById('boot-error-detail');
+        if (!err) return;
+        if (loading) loading.style.display = 'none';
+        if (detail) {
+          detail.textContent =
+            'زمان‌بندی بارگذاری موتور برنامه به پایان رسید. اگر برنامه به‌تازگی به‌روزرسانی شده است، «پاک‌سازی کش» را بزنید.';
+        }
+        err.style.display = 'flex';
+      }, 40000);
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
