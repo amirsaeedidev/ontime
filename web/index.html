@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="ONTIME — سامانه حرفه‌ای مدیریت نوبت‌دهی، رزرو آنلاین و CRM">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0A1227">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ONTIME">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <title>ONTIME — مدیریت نوبت‌دهی</title>
+  <style>
+    @font-face {
+      font-family: 'Lalezar';
+      src: url('assets/assets/fonts/Lalezar-Regular.ttf') format('opentype');
+      font-weight: 400;
+      font-display: swap;
+    }
+    html, body { margin: 0; padding: 0; background: #0A1227; height: 100%; }
+
+    /* ── صفحه بارگذاری ───────────────────────────────────────────── */
+    #loading {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px;
+      background: radial-gradient(circle at 50% 35%, #16224a 0%, #0A1227 70%);
+      font-family: 'Lalezar', Tahoma, sans-serif; color: #9FB0C9; direction: rtl;
+      transition: opacity .3s ease;
+    }
+    #loading .logo { font-size: 34px; letter-spacing: 1px; color: #fff; }
+    #loading .logo span { color: #38BDF8; }
+    #loading .ring {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 3px solid rgba(56,189,248,.2); border-top-color: #38BDF8;
+      animation: spin 900ms linear infinite;
+    }
+    #loading .hint { font-size: 15px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── صفحه خطای راه‌اندازی (به‌جای اسپینر بی‌پایان) ───────────── */
+    #boot-error {
+      position: fixed; inset: 0; z-index: 20; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      background: radial-gradient(circle at 50% 35%, #16224a 0%, #0A1227 70%);
+      font-family: 'Lalezar', Tahoma, sans-serif; color: #fff; direction: rtl; padding: 24px;
+      text-align: center;
+    }
+    #boot-error .title { font-size: 22px; }
+    #boot-error .desc { font-size: 14px; color: #9FB0C9; line-height: 2; max-width: 460px; }
+    #boot-error code {
+      display: block; direction: ltr; font-family: monospace; font-size: 11px;
+      color: #6B7C99; background: #111A2B; border: 1px solid #1E2A47;
+      border-radius: 10px; padding: 10px 12px; max-width: 460px; overflow-wrap: anywhere;
+    }
+    #boot-error button {
+      font-family: 'Lalezar', Tahoma, sans-serif; font-size: 16px; color: #fff;
+      background: linear-gradient(270deg, #2563EB, #38BDF8); border: 0;
+      border-radius: 14px; padding: 12px 26px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="logo">ONT<span>IME</span></div>
+    <div class="ring"></div>
+    <div class="hint">در حال بارگذاری سامانه مدیریت نوبت…</div>
+  </div>
+
+  <div id="boot-error">
+    <div class="title">اجرای برنامه ممکن نشد</div>
+    <div class="desc">
+      بارگذاری موتور برنامه با خطا مواجه شد. اتصال شبکه یا مسدودسازی منابع را بررسی کنید و دوباره تلاش نمایید.
+    </div>
+    <code id="boot-error-detail"></code>
+    <button type="button" onclick="window.location.reload()">تلاش دوباره</button>
+  </div>
+
+  <noscript>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0A1227;color:#fff;font-family:Tahoma,sans-serif;direction:rtl">
+      برای استفاده از سامانه، جاوااسکریپت مرورگر باید فعال باشد.
+    </div>
+  </noscript>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
